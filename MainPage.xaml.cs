@@ -14,7 +14,7 @@ namespace MediaLiveTile
     public sealed partial class MainPage : Page
     {
         private const int FixedTargetSlotCount = 6;
-        private const string GitHubUrl = "";
+        private const string GitHubUrl = "https://github.com/Yizuka17/MediaLiveTile";
 
         private readonly MediaSessionService _mediaSessionService = new MediaSessionService();
         private readonly LiveTileService _liveTileService = new LiveTileService();
