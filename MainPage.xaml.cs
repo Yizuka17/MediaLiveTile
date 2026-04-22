@@ -14,7 +14,7 @@ namespace MediaLiveTile
     public sealed partial class MainPage : Page
     {
         private const int FixedTargetSlotCount = 6;
-        private const string GitHubUrl = "";
+        private const string GitHubUrl = "https://github.com/Yizuka17/MediaLiveTile";
 
         private readonly ForegroundRefreshService _foregroundRefreshService = ForegroundRefreshService.Current;
         private readonly SecondaryTileService _secondaryTileService = new SecondaryTileService();
