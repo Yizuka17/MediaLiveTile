@@ -141,6 +141,7 @@
     <Compile Include="Models\TileDisplayTarget.cs" />
     <Compile Include="Models\TileTargetOption.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\ForegroundRefreshService.cs" />
     <Compile Include="Services\LiveTileService.cs" />
     <Compile Include="Services\MediaRuntimeStore.cs" />
     <Compile Include="Services\MediaSelectionService.cs" />

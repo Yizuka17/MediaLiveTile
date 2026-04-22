@@ -10,7 +10,7 @@
   <Identity
     Name="ef3b10f6-e446-4e08-9d0b-7faba5197983"
     Publisher="CN=SANSH"
-    Version="1.0.6.0" />
+    Version="1.0.7.0" />
 
   <mp:PhoneIdentity PhoneProductId="ef3b10f6-e446-4e08-9d0b-7faba5197983" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

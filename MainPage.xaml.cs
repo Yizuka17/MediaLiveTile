@@ -14,20 +14,15 @@ namespace MediaLiveTile
     public sealed partial class MainPage : Page
     {
         private const int FixedTargetSlotCount = 6;
-        private const string GitHubUrl = "https://github.com/Yizuka17/MediaLiveTile";
+        private const string GitHubUrl = "";
 
-        private readonly MediaSessionService _mediaSessionService = new MediaSessionService();
-        private readonly LiveTileService _liveTileService = new LiveTileService();
+        private readonly ForegroundRefreshService _foregroundRefreshService = ForegroundRefreshService.Current;
         private readonly SecondaryTileService _secondaryTileService = new SecondaryTileService();
-        private readonly DispatcherTimer _refreshTimer = new DispatcherTimer();
         private readonly BitmapImage _defaultPreviewImage = new BitmapImage();
 
-        private bool _isRefreshing;
         private bool _settingsLoaded;
         private bool _isApplyingSelections;
         private int _actionStatusVersion;
-
-        private MediaSelectionResult _latestSelectionResult;
 
         private int _smallTileTargetIndex;
         private int _mediumTileTargetIndex;
@@ -46,9 +41,6 @@ namespace MediaLiveTile
 
             _defaultPreviewImage.UriSource = new Uri("ms-appx:///Assets/Square150x150Logo.png");
 
-            _refreshTimer.Interval = TimeSpan.FromSeconds(30);
-            _refreshTimer.Tick += RefreshTimer_Tick;
-
             InitializeFixedTargetOptions();
 
             Loaded += MainPage_Loaded;
@@ -57,38 +49,52 @@ namespace MediaLiveTile
 
         private async void MainPage_Loaded(object _, RoutedEventArgs __)
         {
+            _foregroundRefreshService.StateChanged += ForegroundRefreshService_StateChanged;
+
+            await _foregroundRefreshService.InitializeAsync();
+
             LoadTileSettings();
             ApplyTargetSelectionsToUi();
 
+            AutoRefreshToggle.IsOn = _foregroundRefreshService.IsAutoRefreshEnabled;
+
             _settingsLoaded = true;
-            await RefreshAsync();
+
+            if (_foregroundRefreshService.LatestSelectionResult == null)
+            {
+                await _foregroundRefreshService.RefreshNowAsync();
+            }
+            else
+            {
+                UpdateUiFromServiceState();
+            }
         }
 
         private void MainPage_Unloaded(object _, RoutedEventArgs __)
         {
-            _refreshTimer.Stop();
+            _foregroundRefreshService.StateChanged -= ForegroundRefreshService_StateChanged;
         }
 
-        private async void RefreshTimer_Tick(object _, object __)
+        private void ForegroundRefreshService_StateChanged(object sender, EventArgs e)
         {
-            await RefreshAsync();
+            UpdateUiFromServiceState();
         }
 
         private async void RefreshButton_Click(object _, RoutedEventArgs __)
         {
-            await RefreshAsync();
+            await _foregroundRefreshService.RefreshNowAsync();
         }
 
         private async void AutoRefreshToggle_Toggled(object _, RoutedEventArgs __)
         {
+            if (!_settingsLoaded)
+                return;
+
+            _foregroundRefreshService.SetAutoRefreshEnabled(AutoRefreshToggle.IsOn);
+
             if (AutoRefreshToggle.IsOn)
             {
-                _refreshTimer.Start();
-                await RefreshAsync();
-            }
-            else
-            {
-                _refreshTimer.Stop();
+                await _foregroundRefreshService.RefreshNowAsync();
             }
         }
 
@@ -279,114 +285,56 @@ namespace MediaLiveTile
 
         private int GetSelectedTargetIndex(ComboBox comboBox)
         {
-            return comboBox.SelectedIndex >= 0
-                ? comboBox.SelectedIndex
-                : 0;
+            return comboBox.SelectedIndex >= 0 ? comboBox.SelectedIndex : 0;
         }
 
-        private async Task RefreshAsync()
+        private void UpdateUiFromServiceState()
         {
-            if (_isRefreshing)
-                return;
+            var result = _foregroundRefreshService.LatestSelectionResult;
 
-            _isRefreshing = true;
-            RefreshButton.IsEnabled = false;
+            StatusTextBlock.Text = string.IsNullOrWhiteSpace(_foregroundRefreshService.StatusText)
+                ? "等待刷新"
+                : _foregroundRefreshService.StatusText;
 
-            try
+            if (_foregroundRefreshService.LastRefreshTime.HasValue)
             {
-                StatusTextBlock.Text = "正在读取系统媒体会话...";
-                PrimaryMediaTextBlock.Text = "主媒体：读取中...";
-                SecondaryMediaTextBlock.Text = "次媒体：读取中...";
+                LastRefreshTextBlock.Text = $"上次刷新：{_foregroundRefreshService.LastRefreshTime.Value:HH:mm:ss}";
+            }
+            else
+            {
                 LastRefreshTextBlock.Text = "上次刷新：--";
+            }
 
-                VisibleSessions.Clear();
+            VisibleSessions.Clear();
 
-                var result = await _mediaSessionService.GetSelectionAsync();
-                _latestSelectionResult = result;
-
-                MediaRuntimeStore.SetSessions(result.AllSessions);
-
+            if (result != null)
+            {
                 int visibleCount = Math.Min(result.Count, 4);
                 for (int i = 0; i < visibleCount; i++)
                 {
                     VisibleSessions.Add(result.AllSessions[i]);
                 }
 
-                StatusTextBlock.Text = result.Count == 0
-                    ? "未检测到媒体会话"
-                    : $"已检测到 {result.Count} 个媒体会话";
-
                 PrimaryMediaTextBlock.Text = BuildSummary("主媒体", result.PrimaryMedia);
                 SecondaryMediaTextBlock.Text = BuildSummary("次媒体", result.SecondaryMedia);
-                LastRefreshTextBlock.Text = $"上次刷新：{DateTime.Now:HH:mm:ss}";
-
                 MoreMediaButton.Visibility = result.Count > 4
                     ? Visibility.Visible
                     : Visibility.Collapsed;
-
-                UpdatePreviewsFromCurrentSelection();
-                await TryUpdateMainTileAsync();
-                await TryUpdateAllSecondaryTilesAsync(result);
             }
-            catch (Exception ex)
+            else
             {
-                StatusTextBlock.Text = $"刷新失败：{ex.Message}";
-                LastRefreshTextBlock.Text = "上次刷新：失败";
+                PrimaryMediaTextBlock.Text = "主媒体：无";
+                SecondaryMediaTextBlock.Text = "次媒体：无";
+                MoreMediaButton.Visibility = Visibility.Collapsed;
+            }
 
-                if (_latestSelectionResult == null)
-                {
-                    PrimaryMediaTextBlock.Text = "主媒体：无";
-                    SecondaryMediaTextBlock.Text = "次媒体：无";
-                    UpdatePreviewsFromCurrentSelection();
-                }
-            }
-            finally
-            {
-                RefreshButton.IsEnabled = true;
-                _isRefreshing = false;
-            }
+            UpdatePreviewsFromCurrentSelection();
         }
 
         private async Task RefreshMainTileAndPreviewsAsync()
         {
             UpdatePreviewsFromCurrentSelection();
-            await TryUpdateMainTileAsync();
-        }
-
-        private async Task TryUpdateMainTileAsync()
-        {
-            try
-            {
-                await _liveTileService.UpdateMainTileAsync(
-                    _latestSelectionResult,
-                    _smallTileTargetIndex,
-                    _mediumTileTargetIndex,
-                    _wideTileTargetIndex,
-                    _largeTileTargetIndex);
-            }
-            catch (Exception ex)
-            {
-                SetActionStatus($"主磁贴更新失败：{ex.Message}");
-            }
-        }
-
-        private async Task TryUpdateAllSecondaryTilesAsync(MediaSelectionResult result)
-        {
-            try
-            {
-                var tiles = await _secondaryTileService.GetManagedTilesAsync();
-                foreach (var tile in tiles)
-                {
-                    await _liveTileService.UpdateSecondaryTileAsync(
-                        tile.TileId,
-                        result,
-                        tile.TargetIndex);
-                }
-            }
-            catch (Exception ex)
-            {
-                SetActionStatus($"次级磁贴更新失败：{ex.Message}");
-            }
+            await _foregroundRefreshService.UpdateTilesOnlyAsync();
         }
 
         private async Task PinPreviewTileAsync(PinnedTileKind kind, int targetIndex)
@@ -409,16 +357,9 @@ namespace MediaLiveTile
                 }
 
                 string tileId = _secondaryTileService.CreateTileId(kind, targetIndex);
+                await _foregroundRefreshService.UpdateOneSecondaryTileAsync(tileId, targetIndex);
 
-                if (_latestSelectionResult != null)
-                {
-                    await _liveTileService.UpdateSecondaryTileAsync(
-                        tileId,
-                        _latestSelectionResult,
-                        targetIndex);
-                }
-
-                await ShowTemporaryActionStatusAsync("已固定磁贴");
+                await ShowTemporaryActionStatusAsync("已固定磁贴（默认显示为中磁贴，可在开始菜单手动调整大小）");
             }
             catch (Exception ex)
             {
@@ -436,7 +377,7 @@ namespace MediaLiveTile
 
         private MediaSessionInfo ResolveMediaByIndex(int index)
         {
-            var all = _latestSelectionResult?.AllSessions;
+            var all = _foregroundRefreshService.LatestSelectionResult?.AllSessions;
 
             if (all == null || all.Count == 0)
                 return null;
