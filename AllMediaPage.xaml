@@ -1,0 +1,83 @@
+﻿<Page
+    x:Class="MediaLiveTile.AllMediaPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MediaLiveTile"
+    xmlns:model="using:MediaLiveTile.Models"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="全部媒体"
+                       FontSize="36"/>
+            <TextBlock x:Name="PageStatusTextBlock"
+                       Margin="0,8,0,0"
+                       Opacity="0.7"
+                       Text="当前共 0 个媒体会话"/>
+        </StackPanel>
+
+        <Button Grid.Row="1"
+                Content="返回"
+                Click="BackButton_Click"
+                Width="100"
+                Margin="0,20,0,20"
+                HorizontalAlignment="Left"/>
+
+        <ListView Grid.Row="2"
+                  ItemsSource="{x:Bind AllSessions, Mode=OneWay}"
+                  SelectionMode="None"
+                  IsItemClickEnabled="False">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="model:MediaSessionInfo">
+                    <Border BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                            BorderThickness="1"
+                            Padding="12"
+                            Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Width="80" Height="80" Background="#202020">
+                                <Image Source="{x:Bind DisplayImage}"
+                                       Stretch="UniformToFill"/>
+
+                                <TextBlock Text="{x:Bind ThumbnailPlaceholderText}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="#AAFFFFFF"/>
+                            </Grid>
+
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                <TextBlock Text="{x:Bind DisplayTitle}"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"/>
+
+                                <TextBlock Text="{x:Bind RoleLine}"
+                                           Margin="0,4,0,4"
+                                           Foreground="#7CD67C"/>
+
+                                <TextBlock Text="{x:Bind TitleLine}"
+                                           TextWrapping="WrapWholeWords"/>
+                                <TextBlock Text="{x:Bind ArtistLine}"
+                                           TextWrapping="WrapWholeWords"/>
+                                <TextBlock Text="{x:Bind AlbumLine}"
+                                           TextWrapping="WrapWholeWords"/>
+                                <TextBlock Text="{x:Bind PlaybackStatusLine}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>
