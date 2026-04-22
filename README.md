@@ -31,6 +31,10 @@
 - 专辑
 - 播放状态
 - 缩略图 / 封面
+- <img width="2522" height="1326" alt="Snipaste_2026-04-22_19-51-20" src="https://github.com/user-attachments/assets/3afa0551-51ac-4b63-a1b8-a5e77c9cf6bf" />
+- <img width="597" height="310" alt="Snipaste_2026-04-22_19-54-49" src="https://github.com/user-attachments/assets/c587dff6-52c6-4f59-af9f-64205c0555eb" />
+
+
 
 当前已验证可识别如下来源中的一部分或全部信息：
 
